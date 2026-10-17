@@ -1,0 +1,26 @@
+# Logs and diagnostic output
+*.log
+err.txt
+out.txt
+
+# Operating System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor configurations
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Environment variables & secrets (defense-in-depth)
+.env
+.env.*
+*.local
+secrets/
+
+# Temporary / backup files
+*.tmp
+*.bak
+*~

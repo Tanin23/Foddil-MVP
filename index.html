@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FODDIL — Dublin's Modern Surplus Food Marketplace</title>
+  <meta name="description" content="Know exactly what surplus food you're rescuing in Dublin. See exact photos, exact prices, live stock quantities, and pickup times from local businesses.">
+  <meta name="theme-color" content="#0E4B5B">
+  
+  <!-- Modern Typography (Plus Jakarta Sans) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet Map CSS for Dublin Interactive Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <!-- Design System CSS -->
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <!-- Accessibility: Skip to main content -->
+  <a class="skip-link" href="#customer-section">Skip to content</a>
+
+  <!-- ==========================================================================
+       Top App Header & Navigation
+       ========================================================================== -->
+  <header class="app-header">
+    <div class="container header-inner">
+      <!-- Brand Logo (Official Foddil Wordmark) -->
+      <a class="brand-wrapper" href="#" onclick="window.location.reload(); return false;" title="Foddil Dublin">
+        <img src="assets/images/foddil_logo.png" alt="Foddil Logo" class="brand-logo-img">
+      </a>
+
+      <!-- Dublin Location Selector -->
+      <div class="location-badge" id="location-picker-btn" title="Your current Dublin location">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span>Dublin 2 • City Centre</span>
+      </div>
+
+      <!--
+        ROLE SWITCHER — Prototype Only.
+        In production this will be replaced by proper role-based authentication.
+        Roles: Customer | Merchant | Founder Admin
+        TODO: Wire to Firebase Auth / JWT session on user login.
+      -->
+      <div class="role-switcher-container" title="Switch view — demo prototype only">
+        <button class="role-btn active" data-role="customer">Customer</button>
+        <button class="role-btn merchant" data-role="merchant">Merchant</button>
+        <button class="role-btn admin" data-role="admin">Founder Admin</button>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <!--
+          IMPACT BADGE — Values below are demo/session data only.
+          TODO: Replace with real cumulative order data from the database
+          once user accounts and order history are implemented.
+        -->
+        <button class="impact-header-badge" id="btn-open-impact" title="View your session impact (demo data)">
+          🌱 <span id="header-impact-text">0 Rescued • 0kg CO₂</span>
+        </button>
+
+        <!-- Cart Trigger Button -->
+        <button class="btn-cart-header" id="btn-cart-header" aria-label="Open Shopping Cart">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          <span style="display: none;" class="d-md-inline">Cart</span>
+          <span class="cart-count-badge" id="cart-count-badge" style="display: none;">0</span>
+        </button>
+
+        <!-- User Profile Chip -->
+        <div class="user-chip" id="user-chip-display">
+          <div class="user-avatar">SN</div>
+          <span style="display: none;" class="d-md-inline">Sarah O.</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       SECTION 1: CUSTOMER EXPERIENCE
+       ========================================================================== -->
+  <main id="customer-section" class="container" style="margin-top: 16px;">
+    <!-- Hero Value Banner -->
+    <section class="foddil-hero">
+      <div class="container hero-content">
+        <span class="hero-pill">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          No Mystery Bags &bull; 100% Transparency
+        </span>
+        <h1 class="hero-title">Know Exactly What Food You're Rescuing.</h1>
+        <p class="hero-subtitle">
+          Discover surplus food from local businesses, see exactly what is available, and collect it at a convenient time.
+        </p>
+
+        <!--
+          HERO STATS — These will be populated from real database aggregates once
+          merchants are live. Values below reflect the platform's core proposition,
+          not verified network statistics.
+        -->
+        <div class="hero-stats-row">
+          <div class="hero-stat-card">
+            <span class="hero-stat-value">Exact Items</span>
+            <span class="hero-stat-label">See Every Food Detail</span>
+          </div>
+          <div class="hero-stat-card">
+            <span class="hero-stat-value">Live Stock</span>
+            <span class="hero-stat-label">Real-Time Quantity</span>
+          </div>
+          <div class="hero-stat-card">
+            <span class="hero-stat-value">Dublin</span>
+            <span class="hero-stat-label">Local Collection</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Search & Filters Toolbar -->
+    <section class="browse-controls">
+      <!-- Search Input + Map Toggle -->
+      <div class="search-bar-row">
+        <div class="search-input-wrapper">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="search-food-input" class="search-input" placeholder="Search exact food, bakery, pizza, or Dublin area (e.g. Sourdough, Portobello)...">
+        </div>
+        <button class="view-toggle-btn" id="btn-toggle-map">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          Dublin Map
+        </button>
+      </div>
+
+      <!-- Category Filter Pills with Favorites -->
+      <div class="category-pills-row">
+        <button class="category-pill active" data-category="All">All Surplus Food</button>
+        <button class="category-pill" data-category="Favorites">❤️ Favorites Only</button>
+        <button class="category-pill" data-category="Bakery & Pastries">🥐 Bakery & Pastries</button>
+        <button class="category-pill" data-category="Fresh Meals & Bowls">🥗 Fresh Meals & Bowls</button>
+        <button class="category-pill" data-category="Artisan Pizza">🍕 Artisan Pizza</button>
+        <button class="category-pill" data-category="Sandwiches & Delis">🥪 Sandwiches & Delis</button>
+      </div>
+
+      <!-- Time of Day Pickup Filter (Too Good To Go Style) -->
+      <div class="time-slot-row">
+        <button class="time-slot-btn active" data-slot="all">🕒 All Pickup Times</button>
+        <button class="time-slot-btn" data-slot="lunch">☀️ Lunch (11:00 – 16:00)</button>
+        <button class="time-slot-btn" data-slot="dinner">🌆 Dinner (16:00 – 20:00)</button>
+        <button class="time-slot-btn" data-slot="late">🌙 Late Night (20:00+)</button>
+      </div>
+
+      <!-- Dietary Quick Filter Chips -->
+      <div class="dietary-filters-row" style="margin-top: 6px;">
+        <span class="dietary-label">Dietary:</span>
+        <button class="diet-pill" data-diet="Vegetarian">Vegetarian</button>
+        <button class="diet-pill" data-diet="Vegan">Vegan</button>
+        <button class="diet-pill" data-diet="Gluten-Free">Gluten-Free</button>
+        <button class="diet-pill" data-diet="Halal">Halal</button>
+        <button class="diet-pill" data-diet="Dairy-Free">Dairy-Free</button>
+      </div>
+    </section>
+
+    <!-- Interactive Dublin Leaflet Map (Hidden by default, toggled via Dublin Map button) -->
+    <section class="map-view-wrapper" id="map-view-wrapper" style="display: none;">
+      <div class="map-floating-panel">
+        <div class="map-panel-title">Dublin Surplus Food Map</div>
+        <div class="map-panel-text">Click any green pin to view merchant details and active surplus inventory.</div>
+      </div>
+      <div id="dublin-map"></div>
+    </section>
+
+    <!-- Surplus Food Items Grid -->
+    <section>
+      <div class="section-header-row">
+        <h2 class="section-title">Available Near You Today</h2>
+        <span class="items-count-tag" id="items-count-tag">Loading surplus items...</span>
+      </div>
+      <div class="food-grid" id="food-grid">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </section>
+
+    <!-- Customer Active Orders & Live Pickup Trackers -->
+    <section id="customer-orders-container">
+      <!-- Rendered dynamically by app.js -->
+    </section>
+  </main>
+
+  <!-- ==========================================================================
+       SECTION 2: MERCHANT DASHBOARD
+       ========================================================================== -->
+  <main id="merchant-section" class="container" style="display: none; margin-top: 24px;">
+    <!-- Merchant Profile Header -->
+    <div style="background: #fff; padding: 24px; border-radius: 16px; border: 1px solid #E2E8F0; margin-bottom: 24px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px;">
+      <div>
+        <span style="font-size: 11px; font-weight: 800; color: #0284C7; text-transform: uppercase; letter-spacing: 0.5px;">Merchant Partner Portal</span>
+        <h1 style="font-size: 24px; font-weight: 800; color: #0E4B5B;">The Bretzel Bakery & Café</h1>
+        <p style="font-size: 13px; color: #64748B; margin-top: 4px;">📍 1A Lennox Street, Portobello, Dublin 8 • Eircode: D08 X7K2</p>
+      </div>
+      <button class="btn-checkout-primary" id="btn-open-add-listing" style="width: auto; padding: 0 20px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Surplus Food Listing
+      </button>
+    </div>
+
+    <!-- Merchant 4-Stat Metrics Row -->
+    <div class="metrics-grid-4">
+      <div class="metric-card">
+        <span class="metric-label">Today's Surplus Revenue</span>
+        <span class="metric-value" id="m-revenue-val">€0.00</span>
+        <span class="metric-trend">↑ Safe same-day recovery</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Active Orders</span>
+        <span class="metric-value" id="m-orders-val">0</span>
+        <span class="metric-trend">Live customer pickups</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Surplus Meals Rescued</span>
+        <span class="metric-value" id="m-items-sold-val">0 items</span>
+        <span class="metric-trend">Waste diverted from landfill</span>
+      </div>
+      <!--
+        TODO: Merchant rating to be populated from real customer review data.
+        This will be implemented as part of the post-MVP review system.
+      -->
+      <div class="metric-card">
+        <span class="metric-label">Merchant Rating</span>
+        <span class="metric-value" id="m-rating-val">—</span>
+        <span class="metric-trend">No reviews yet (coming soon)</span>
+      </div>
+    </div>
+
+    <!-- Live Inventory Management Table -->
+    <div class="section-header-row">
+      <h2 class="section-title">Live Inventory & Stock Manager</h2>
+      <span style="font-size: 12px; color: #64748B;">Use + / − to adjust real-time stock without page reload</span>
+    </div>
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Food Listing</th>
+            <th>Pricing (Surplus / Orig)</th>
+            <th>Stock Left</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="merchant-inventory-tbody">
+          <!-- Rendered dynamically -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Live Incoming Orders Kanban / Verification -->
+    <div class="section-header-row" style="margin-top: 32px;">
+      <h2 class="section-title">Incoming Customer Orders & Handover</h2>
+      <span style="font-size: 12px; color: #64748B;">Verify customer 4-digit PIN upon handover</span>
+    </div>
+    <div id="merchant-orders-kanban">
+      <!-- Rendered dynamically -->
+    </div>
+
+    <!-- Store Inventory Audit & Change Log -->
+    <div class="section-header-row" style="margin-top: 32px;">
+      <div>
+        <h2 class="section-title">Store Inventory Audit & Change Log</h2>
+        <span style="font-size: 12px; color: #64748B;">Recent stock changes, customer order decrements & manual adjustments</span>
+      </div>
+    </div>
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Food Listing</th>
+            <th>Stock Change</th>
+            <th>Reason / Order Reference</th>
+          </tr>
+        </thead>
+        <tbody id="merchant-history-tbody">
+          <!-- Rendered dynamically -->
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- ==========================================================================
+       SECTION 3: ADMIN PANEL (FOUNDER VIEW)
+       ========================================================================== -->
+  <main id="admin-section" class="container" style="display: none; margin-top: 24px;">
+    <!-- Founder Header -->
+    <div style="background: linear-gradient(135deg, #1E1B4B 0%, #312E81 100%); color: #fff; padding: 24px; border-radius: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <span class="admin-badge">FOUNDER & PRODUCT/UX DESIGNER</span>
+        <h1 style="font-size: 24px; font-weight: 800; margin-top: 6px;">MD Tanin Islam Nirob — Foddil Admin Console</h1>
+        <p style="font-size: 13px; color: #C7D2FE; margin-top: 2px;">Dublin, Ireland • Platform Governance, Commission & Inventory Audit</p>
+      </div>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="window.FoddilDB.resetToCleanDemoTest(); location.reload();" style="background: #10B981; border: 1px solid #34D399; color: #fff; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer;" title="Reset Almond Croissant to 10 available, 0 sold for Section 9 test">
+          ↺ Reset Demo Scenario (Croissant Qty = 10)
+        </button>
+        <button onclick="window.FoddilDB.resetToDefaults(); location.reload();" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer;">
+          Reset Sample Dublin Data
+        </button>
+      </div>
+    </div>
+
+    <!-- Founder Analytics KPI Grid -->
+    <div class="metrics-grid-4">
+      <div class="metric-card">
+        <span class="metric-label">Platform GMV (Total Volume)</span>
+        <span class="metric-value" id="admin-gmv-val">€0.00</span>
+        <span class="metric-trend" style="color: #4F46E5;">All Dublin transactions</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Foddil Commission Earned</span>
+        <span class="metric-value" id="admin-commission-val">€0.00</span>
+        <span class="metric-trend" style="color: #15803D;">Net platform revenue</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Average Sell-Through Rate</span>
+        <span class="metric-value" id="admin-sellthrough-val">0%</span>
+        <span class="metric-trend" style="color: #0284C7;">Surplus conversion rate</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Dublin CO₂ Diverted</span>
+        <span class="metric-value" id="admin-co2-val">0 kg</span>
+        <span class="metric-trend" style="color: #15803D;">2.5 kg CO₂ / meal saved</span>
+      </div>
+    </div>
+
+    <!-- Platform Settings Config Box -->
+    <div class="admin-config-box">
+      <h3 style="font-size: 16px; font-weight: 800; color: #0F172A; margin-bottom: 12px;">Platform Commission & Fee Configuration</h3>
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;">
+        <div style="flex: 1; min-width: 200px;">
+          <label class="form-label">Merchant Commission Rate (%)</label>
+          <input type="number" id="admin-commission-rate-input" class="form-input" value="15" min="5" max="30">
+        </div>
+        <div style="flex: 1; min-width: 200px;">
+          <label class="form-label">Customer Platform Service Fee (€)</label>
+          <input type="text" class="form-input" value="€0.50" disabled>
+        </div>
+        <button class="btn-checkout-primary" id="btn-save-admin-settings" style="width: auto; height: 42px; padding: 0 20px;">
+          Save Platform Settings
+        </button>
+      </div>
+    </div>
+
+    <!-- Section 7: Unified Orders Flow - All Dublin Orders & Transaction Audit -->
+    <div class="section-header-row">
+      <div>
+        <h2 class="section-title">All Dublin Orders & Transaction Audit</h2>
+        <p style="font-size: 12px; color: #64748B; margin-top: 2px;">Real-time feed of all customer orders across Dublin merchant network</p>
+      </div>
+      <span class="items-count-tag" id="admin-orders-count-tag">0 orders</span>
+    </div>
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Merchant</th>
+            <th>Food Item(s)</th>
+            <th>Qty</th>
+            <th>Customer</th>
+            <th>Total (€)</th>
+            <th>Status</th>
+            <th>Date & Time</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="admin-orders-tbody">
+          <!-- Rendered dynamically -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Section 8: Live Inventory History & Stock Audit Trail -->
+    <div class="section-header-row" style="margin-top: 32px;">
+      <div>
+        <h2 class="section-title">Live Inventory History & Stock Audit Log</h2>
+        <p style="font-size: 12px; color: #64748B; margin-top: 2px;">Immutable log tracking decrements, merchant stock adjustments, and order cancellations</p>
+      </div>
+      <span class="items-count-tag" id="admin-history-count-tag">Live Audit Trail</span>
+    </div>
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Food Listing</th>
+            <th>Merchant</th>
+            <th>Stock Change</th>
+            <th>Reason / Order Reference</th>
+          </tr>
+        </thead>
+        <tbody id="admin-history-tbody">
+          <!-- Rendered dynamically -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Merchant Partner Approvals Table -->
+    <div class="section-header-row" style="margin-top: 32px;">
+      <h2 class="section-title">Dublin Merchant Partners & Verification</h2>
+    </div>
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Merchant Name</th>
+            <th>Neighbourhood</th>
+            <th>Category</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="admin-merchants-tbody">
+          <!-- Rendered dynamically -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Platform Food Listings Moderation Table -->
+    <div class="section-header-row" style="margin-top: 32px;">
+      <h2 class="section-title">All Dublin Surplus Food Listings</h2>
+    </div>
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Item & Merchant</th>
+            <th>Price</th>
+            <th>Stock Left</th>
+            <th>Status</th>
+            <th>Moderation</th>
+          </tr>
+        </thead>
+        <tbody id="admin-listings-tbody">
+          <!-- Rendered dynamically -->
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- ==========================================================================
+       CART DRAWER
+       ========================================================================== -->
+  <div class="cart-drawer-overlay" id="cart-drawer-overlay"></div>
+  <aside class="cart-drawer" id="cart-drawer">
+    <div class="cart-header">
+      <div class="cart-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        Your Surplus Cart
+      </div>
+      <button class="btn-close-drawer" id="btn-close-cart" aria-label="Close cart">✕</button>
+    </div>
+
+    <!-- Items List -->
+    <div class="cart-items-list" id="cart-items-list">
+      <!-- Rendered dynamically by app.js -->
+    </div>
+
+    <!-- Cart Footer & Checkout -->
+    <div class="cart-footer-section">
+      <div class="cart-savings-banner">
+        <span>Food Waste Savings:</span>
+        <strong id="cart-savings">€0.00</strong>
+      </div>
+      <div class="cart-summary-line">
+        <span>Food Subtotal</span>
+        <span id="cart-subtotal">€0.00</span>
+      </div>
+      <div class="cart-summary-line">
+        <span>Dublin Service Fee</span>
+        <span id="cart-fee">€0.50</span>
+      </div>
+      <div class="cart-summary-line total">
+        <span>Total Amount</span>
+        <span id="cart-total">€0.00</span>
+      </div>
+      <div id="cart-merchant-notice" style="display:none; background:#FEF3C7; border:1px solid #F59E0B; border-radius:8px; padding:10px 12px; font-size:12px; font-weight:700; color:#92400E; text-align:center;"></div>
+      <button class="btn-checkout-primary" id="btn-checkout">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4"/><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+        Review &amp; Place Test Order
+      </button>
+    </div>
+  </aside>
+
+  <!-- ==========================================================================
+       ORDER REVIEW MODAL (Test Order — No Payment Required)
+       ========================================================================== -->
+  <div class="modal-overlay" id="stripe-modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E4B5B" stroke-width="2.5"><path d="M9 12l2 2 4-4"/><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+          <span style="font-size: 15px; font-weight: 800; color: #0E4B5B;">Order Summary &amp; Review</span>
+        </div>
+        <button class="btn-close-drawer" id="btn-close-stripe" aria-label="Close review">&#x2715;</button>
+      </div>
+      <div class="modal-body" id="stripe-modal-body">
+        <div style="background:#F0FDF4; border:1px solid #86EFAC; border-radius:10px; padding:8px 12px; margin-bottom:12px; display:flex; align-items:center; gap:10px;">
+          <span style="font-size:18px;">🧪</span>
+          <div>
+            <div style="font-size:11px; font-weight:800; color:#166534; text-transform:uppercase; letter-spacing:0.5px;">Test Order Mode</div>
+            <div style="font-size:11px; color:#15803D; margin-top:1px;">No payment required. Inventory will be reserved immediately on placement.</div>
+          </div>
+        </div>
+        <div id="checkout-review-body"></div>
+      </div>
+      <div class="modal-footer order-review-footer">
+        <form id="stripe-checkout-form" style="width: 100%; margin: 0;">
+          <button type="submit" class="btn-place-order-primary" id="btn-pay-stripe">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4"/><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+            Place Test Order
+          </button>
+          <p style="font-size:11px; color:#64748B; text-align:center; margin-top:6px; line-height:1.4;">
+            Placing this order will immediately reduce live inventory. Stripe payment will be connected in a future step.
+          </p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       ORDER SUCCESS CONFIRMATION MODAL
+       ========================================================================== -->
+  <div class="modal-overlay" id="order-success-overlay">
+    <div class="modal-card order-success-card">
+      <div class="modal-header order-success-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 16px;">✅</span>
+          <span style="font-size: 15px; font-weight: 800; color: #0E4B5B;">Order Confirmed</span>
+          <span class="order-success-status-badge" style="font-size: 10px; padding: 2px 8px; margin-left: 4px;">⏳ PENDING</span>
+        </div>
+        <button class="btn-close-drawer" id="btn-close-order-success" onclick="window.FoddilApp.closeOrderSuccess()" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body order-success-body" id="order-success-body">
+        <!-- Populated dynamically by showOrderSuccess() -->
+      </div>
+      <div class="modal-footer order-success-footer">
+        <button class="btn-view-orders" onclick="window.FoddilApp.viewMyOrders()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          View My Orders
+        </button>
+        <button class="btn-continue-shopping" onclick="window.FoddilApp.closeOrderSuccess()">
+          ← Continue Shopping
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       ITEM DETAIL MODAL
+       ========================================================================== -->
+  <div class="modal-overlay" id="detail-modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span style="font-size: 14px; font-weight: 800; color: #0E4B5B;">Surplus Food Details</span>
+        <button class="btn-close-drawer" id="btn-close-detail">✕</button>
+      </div>
+      <div class="modal-body" id="detail-modal-content">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MERCHANT: ADD SURPLUS FOOD MODAL
+       ========================================================================== -->
+  <div class="modal-overlay" id="add-listing-modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span style="font-size: 16px; font-weight: 800; color: #0E4B5B;">Add New Surplus Food Item</span>
+        <button class="btn-close-drawer" id="btn-close-add-listing">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-add-listing">
+          <div class="form-group">
+            <label class="form-label">Exact Food Name</label>
+            <input type="text" id="add-food-title" class="form-input" placeholder="e.g. Cardamom Bun & Cruffin Box (Pack of 2)" required>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <select id="add-food-category" class="form-input">
+                <option value="Bakery & Pastries">Bakery & Pastries</option>
+                <option value="Fresh Meals & Bowls">Fresh Meals & Bowls</option>
+                <option value="Artisan Pizza">Artisan Pizza</option>
+                <option value="Sandwiches & Delis">Sandwiches & Delis</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Food Photo Preset</label>
+              <select id="add-food-photo-preset" class="form-input">
+                <option value="assets/images/pastries.jpg">Pastry & Treats</option>
+                <option value="assets/images/croissant.jpg">Fresh Croissants</option>
+                <option value="assets/images/sourdough.jpg">Artisan Sourdough</option>
+                <option value="assets/images/mezze_bowl.jpg">Mezze Fresh Bowl</option>
+                <option value="assets/images/pizza.jpg">Wood-Fired Pizza</option>
+                <option value="assets/images/sandwich.jpg">Gourmet Deli Sandwich</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Surplus Price (€)</label>
+              <input type="number" step="0.10" id="add-food-price" class="form-input" placeholder="3.50" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Original Price (€)</label>
+              <input type="number" step="0.10" id="add-food-original-price" class="form-input" placeholder="8.50" required>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Available Quantity (Stock)</label>
+              <input type="number" id="add-food-quantity" class="form-input" value="6" min="1" max="50" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Approx Weight (Grams)</label>
+              <input type="number" id="add-food-weight" class="form-input" value="350">
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Pickup Start Time</label>
+              <input type="text" id="add-food-pickup-start" class="form-input" value="17:00" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Pickup End Time</label>
+              <input type="text" id="add-food-pickup-end" class="form-input" value="18:30" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Pickup Location (Dublin)</label>
+            <input type="text" id="add-food-location" class="form-input" value="1A Lennox Street, Portobello, Dublin 8" placeholder="Store address or Dublin collection point" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Dietary Tags</label>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; margin-top: 4px;">
+              <label><input type="checkbox" class="add-dietary-check" value="Vegetarian" checked> Vegetarian</label>
+              <label><input type="checkbox" class="add-dietary-check" value="Vegan"> Vegan</label>
+              <label><input type="checkbox" class="add-dietary-check" value="Gluten-Free"> Gluten-Free</label>
+              <label><input type="checkbox" class="add-dietary-check" value="Halal"> Halal</label>
+              <label><input type="checkbox" class="add-dietary-check" value="Dairy-Free"> Dairy-Free</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Allergens</label>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; margin-top: 4px;">
+              <label><input type="checkbox" class="add-allergen-check" value="Gluten" checked> Gluten</label>
+              <label><input type="checkbox" class="add-allergen-check" value="Dairy" checked> Dairy</label>
+              <label><input type="checkbox" class="add-allergen-check" value="Eggs"> Eggs</label>
+              <label><input type="checkbox" class="add-allergen-check" value="Nuts"> Nuts</label>
+              <label><input type="checkbox" class="add-allergen-check" value="Sesame"> Sesame</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Description & Ingredients</label>
+            <textarea id="add-food-desc" class="form-input" style="height: 64px; padding: 8px;" placeholder="Freshly baked this morning, crisp exterior with buttery layers..."></textarea>
+          </div>
+
+          <button type="submit" class="btn-checkout-primary" style="margin-top: 12px;">
+            Publish Live to Dublin Marketplace
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       SUSTAINABILITY & PERSONAL IMPACT MODAL (Too Good To Go Style)
+       ========================================================================== -->
+  <div class="modal-overlay" id="impact-modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 18px;">🌱</span>
+          <span style="font-size: 16px; font-weight: 800; color: #0E4B5B;">My Environmental Impact</span>
+        </div>
+        <button class="btn-close-drawer" id="btn-close-impact">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="impact-hero-graphic">
+          <div class="impact-circle-meter">
+            <span style="font-size: 24px; font-weight: 800; color: #10B981;" id="impact-meals-big">5</span>
+            <span style="font-size: 10px; font-weight: 700; color: #065F46; text-transform: uppercase;">Rescued</span>
+          </div>
+          <h3 style="font-size: 16px; font-weight: 800; color: #065F46;" id="impact-level-title">Green Rescuer Level 2</h3>
+          <p style="font-size: 12px; color: #047857; margin-top: 2px;">
+            Every meal rescued on Foddil directly prevents surplus restaurant and bakery waste in Dublin.
+          </p>
+        </div>
+
+        <div class="impact-grid-2">
+          <div class="impact-stat-box">
+            <span class="impact-stat-val" id="impact-co2-val">12.5 kg</span>
+            <span class="impact-stat-lbl">CO₂e Emissions Prevented</span>
+          </div>
+          <div class="impact-stat-box">
+            <span class="impact-stat-val" id="impact-money-val">€42.50</span>
+            <span class="impact-stat-lbl">Money Saved On Great Food</span>
+          </div>
+          <div class="impact-stat-box">
+            <span class="impact-stat-val" id="impact-km-val">52 km</span>
+            <span class="impact-stat-lbl">Car Travel Emissions Offset</span>
+          </div>
+          <div class="impact-stat-box">
+            <span class="impact-stat-val" id="impact-showers-val">138 mins</span>
+            <span class="impact-stat-lbl">Hot Showers Energy Conserved</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 12px 20px;">
+        <button onclick="window.FoddilApp.shareImpact()" class="btn-checkout-primary" style="background: #10B981; width: 100%; height: 42px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Share My Dublin Green Impact
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MOBILE BOTTOM NAVIGATION BAR
+       ========================================================================== -->
+  <nav class="mobile-bottom-nav">
+    <button class="nav-tab-btn active" data-target="explore">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+      <span>Explore</span>
+    </button>
+    <button class="nav-tab-btn" data-target="map">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      <span>Map</span>
+    </button>
+    <button class="nav-tab-btn" data-target="orders">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span>My Orders</span>
+    </button>
+    <button class="nav-tab-btn" data-target="cart">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      <span>Cart</span>
+    </button>
+  </nav>
+
+  <!-- Notification Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- ==========================================================================
+       SIGN IN / SIGN UP MODAL
+       ⚠️ DEMO ONLY — Local localStorage auth. Not cryptographically secure.
+       In production: replace with Firebase Auth or JWT / bcrypt backend.
+       ========================================================================== -->
+  <div class="modal-overlay" id="auth-modal-overlay" aria-modal="true" role="dialog" aria-label="Sign in or create account">
+    <div class="modal-card auth-modal-card">
+      <!-- Header -->
+      <div class="modal-header auth-modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <img src="assets/images/foddil_logo.png" alt="Foddil" style="height:28px; width:auto;">
+          <span style="font-size:15px; font-weight:800; color:#0E4B5B;">My Account</span>
+        </div>
+        <button class="btn-close-drawer" id="btn-close-auth" aria-label="Close">✕</button>
+      </div>
+
+      <!-- DEMO NOTICE -->
+      <div class="auth-demo-notice">
+        <span>⚠️</span>
+        <span><strong>DEMO ONLY</strong> — Client-side prototype. Not real authentication. Passwords are not securely stored.</span>
+      </div>
+
+      <!-- Tab switcher -->
+      <div class="auth-tab-bar">
+        <button class="auth-tab active" id="auth-tab-signin">Sign In</button>
+        <button class="auth-tab" id="auth-tab-signup">Create Account</button>
+      </div>
+
+      <!-- ── SIGN IN PANEL ── -->
+      <div class="modal-body auth-panel" id="auth-panel-signin" style="display:block;">
+        <form id="form-signin" novalidate autocomplete="on">
+          <div class="auth-field-group">
+            <label class="form-label" for="signin-email">Email Address</label>
+            <input type="email" id="signin-email" name="email" class="form-input auth-input"
+              placeholder="you@example.ie" autocomplete="email" required>
+          </div>
+          <div class="auth-field-group">
+            <label class="form-label" for="signin-password">Password</label>
+            <div class="auth-pw-wrapper">
+              <input type="password" id="signin-password" name="password" class="form-input auth-input"
+                placeholder="Your password" autocomplete="current-password" required>
+              <button type="button" class="auth-pw-toggle" aria-label="Toggle password visibility"
+                onclick="(function(b){const i=b.previousElementSibling;i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈';})(this)">👁</button>
+            </div>
+          </div>
+          <div id="signin-form-msg" class="auth-form-message" style="display:none;"></div>
+          <button type="submit" class="btn-auth-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            Sign In
+          </button>
+          <p class="auth-switch-hint">Don't have an account?
+            <button type="button" class="auth-link-btn" onclick="document.getElementById('auth-tab-signup').click()">Create one free</button>
+          </p>
+        </form>
+
+        <!-- Demo quick-login shortcuts -->
+        <div class="auth-demo-shortcuts">
+          <div class="auth-demo-shortcuts-label">Demo Quick-Login</div>
+          <div class="auth-demo-shortcuts-row">
+            <button class="auth-demo-btn" onclick="FoddilAuth._demoLogin('u-sarah')">👤 Customer (Sarah)</button>
+            <button class="auth-demo-btn" onclick="FoddilAuth._demoLogin('u-bretzel-owner')">🏪 Merchant (William)</button>
+            <button class="auth-demo-btn auth-demo-btn-admin" onclick="FoddilAuth._demoLogin('u-tanin-admin')">⭐ Founder Admin</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SIGN UP PANEL ── -->
+      <div class="modal-body auth-panel" id="auth-panel-signup" style="display:none;">
+        <form id="form-signup" novalidate autocomplete="on">
+          <div class="auth-field-group">
+            <label class="form-label" for="signup-name">Full Name</label>
+            <input type="text" id="signup-name" name="name" class="form-input auth-input"
+              placeholder="Your full name" autocomplete="name" required>
+          </div>
+          <div class="auth-field-group">
+            <label class="form-label" for="signup-email">Email Address</label>
+            <input type="email" id="signup-email" name="email" class="form-input auth-input"
+              placeholder="you@example.ie" autocomplete="email" required>
+          </div>
+          <div class="auth-field-group">
+            <label class="form-label" for="signup-phone">Phone Number <span style="color:#94A3B8; font-weight:400;">(optional)</span></label>
+            <input type="tel" id="signup-phone" name="phone" class="form-input auth-input"
+              placeholder="+353 87 000 0000" autocomplete="tel">
+          </div>
+          <div class="auth-field-group">
+            <label class="form-label" for="signup-role">Account Type</label>
+            <select id="signup-role" class="form-input auth-input">
+              <option value="customer">🛍️ Customer — Rescue surplus food in Dublin</option>
+              <option value="merchant">🏪 Merchant Partner — List my surplus food</option>
+            </select>
+            <span class="auth-field-hint">Founder Admin accounts cannot be self-registered.</span>
+          </div>
+          <div class="auth-field-group">
+            <label class="form-label" for="signup-password">Password</label>
+            <div class="auth-pw-wrapper">
+              <input type="password" id="signup-password" name="password" class="form-input auth-input"
+                placeholder="At least 6 characters" autocomplete="new-password" required>
+              <button type="button" class="auth-pw-toggle" aria-label="Toggle password visibility"
+                onclick="(function(b){const i=b.previousElementSibling;i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈';})(this)">👁</button>
+            </div>
+          </div>
+          <div class="auth-field-group">
+            <label class="form-label" for="signup-password2">Confirm Password</label>
+            <div class="auth-pw-wrapper">
+              <input type="password" id="signup-password2" name="password2" class="form-input auth-input"
+                placeholder="Repeat your password" autocomplete="new-password" required>
+              <button type="button" class="auth-pw-toggle" aria-label="Toggle password visibility"
+                onclick="(function(b){const i=b.previousElementSibling;i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈';})(this)">👁</button>
+            </div>
+          </div>
+          <div id="signup-form-msg" class="auth-form-message" style="display:none;"></div>
+          <button type="submit" class="btn-auth-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+            Create My Account
+          </button>
+          <p class="auth-switch-hint">Already have an account?
+            <button type="button" class="auth-link-btn" onclick="document.getElementById('auth-tab-signin').click()">Sign in</button>
+          </p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MY PROFILE MODAL
+       ========================================================================== -->
+  <div class="modal-overlay" id="profile-modal-overlay" aria-modal="true" role="dialog" aria-label="My profile">
+    <div class="modal-card">
+      <!-- Header -->
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="user-avatar" id="profile-avatar-initials" style="width:34px;height:34px;font-size:13px;">SN</div>
+          <div>
+            <div style="font-size:15px;font-weight:800;color:#0E4B5B;">My Profile</div>
+            <div id="profile-role-display" style="font-size:11px;color:#64748B;font-weight:600;">🛍️ Customer</div>
+          </div>
+        </div>
+        <button class="btn-close-drawer" id="btn-close-profile" aria-label="Close">✕</button>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body">
+        <div id="profile-created-at" style="font-size:11px;color:#94A3B8;margin-bottom:16px;"></div>
+        <form id="form-profile" novalidate>
+          <div class="auth-field-group">
+            <label class="form-label" for="profile-name">Full Name</label>
+            <input type="text" id="profile-name" class="form-input auth-input" placeholder="Your name" required>
+          </div>
+          <div class="auth-field-group">
+            <label class="form-label" for="profile-email">Email Address <span style="color:#94A3B8;font-weight:400;">(read only)</span></label>
+            <input type="email" id="profile-email" class="form-input auth-input" readonly
+              style="background:#F8FAFC; color:#64748B; cursor:not-allowed;">
+          </div>
+          <div class="auth-field-group">
+            <label class="form-label" for="profile-phone">Phone Number</label>
+            <input type="tel" id="profile-phone" class="form-input auth-input" placeholder="+353 87 000 0000">
+          </div>
+
+          <div style="border-top:1px solid #E2E8F0; margin:18px 0 14px; padding-top:14px;">
+            <div style="font-size:12px;font-weight:800;color:#0F172A;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Change Password</div>
+            <div class="auth-field-group">
+              <label class="form-label" for="profile-new-password">New Password <span style="color:#94A3B8;font-weight:400;">(leave blank to keep current)</span></label>
+              <div class="auth-pw-wrapper">
+                <input type="password" id="profile-new-password" class="form-input auth-input" placeholder="Min. 6 characters" autocomplete="new-password">
+                <button type="button" class="auth-pw-toggle" aria-label="Toggle"
+                  onclick="(function(b){const i=b.previousElementSibling;i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈';})(this)">👁</button>
+              </div>
+            </div>
+            <div class="auth-field-group">
+              <label class="form-label" for="profile-new-password2">Confirm New Password</label>
+              <div class="auth-pw-wrapper">
+                <input type="password" id="profile-new-password2" class="form-input auth-input" placeholder="Repeat new password" autocomplete="new-password">
+                <button type="button" class="auth-pw-toggle" aria-label="Toggle"
+                  onclick="(function(b){const i=b.previousElementSibling;i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈';})(this)">👁</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="profile-form-msg" class="auth-form-message" style="display:none;"></div>
+          <button type="submit" class="btn-auth-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Save Changes
+          </button>
+        </form>
+      </div>
+
+      <!-- Footer with Sign Out -->
+      <div class="modal-footer" style="justify-content:center;">
+        <button id="btn-sign-out" class="btn-auth-signout">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign Out
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       ORDER DETAIL MODAL (dynamic, appended by app.js)
+       ===================================================================== -->
+  <div class="modal-overlay" id="order-detail-modal" aria-modal="true" role="dialog" aria-label="Order details">
+    <!-- Content injected dynamically by openOrderDetail() -->
+  </div>
+
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Foddil Application Scripts -->
+  <script src="js/db.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>
